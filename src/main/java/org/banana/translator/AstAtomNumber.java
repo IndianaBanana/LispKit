@@ -1,5 +1,9 @@
 package org.banana.translator;
 
+import lombok.EqualsAndHashCode;
+
+import java.util.Objects;
+@EqualsAndHashCode
 public class AstAtomNumber implements AstNode {
     private final int value;
 
@@ -21,11 +25,4 @@ public class AstAtomNumber implements AstNode {
         return "Num(" + value + ")";
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof AstAtomNumber astAtomNumber){
-            return this.getValue() == astAtomNumber.getValue();
-        }
-        return false;
-    }
 }

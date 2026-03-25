@@ -1,5 +1,9 @@
 package org.banana.translator;
 
+import lombok.EqualsAndHashCode;
+
+import java.util.Objects;
+@EqualsAndHashCode
 public class AstAtomSymbol implements AstNode {
     private final String name;
 
@@ -19,13 +23,5 @@ public class AstAtomSymbol implements AstNode {
     @Override
     public String toString() {
         return "Sym(" + name + ")";
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof AstAtomSymbol astAtomSymbol){
-            return this.getName().equals(astAtomSymbol.getName());
-        }
-        return false;
     }
 }

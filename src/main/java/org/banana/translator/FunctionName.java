@@ -12,7 +12,7 @@ public enum FunctionName {
     MUL("MUL"),
     DIV("DIV"),
     CAR("CAR"),
-    CDR("CAR"),
+    CDR("CDR"),
     CONS("CONS"),
     ATOM("ATOM"),
     REM("REM"),
