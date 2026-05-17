@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class LispContext {
+
     // Это "текущий лист бумаги" — локальные переменные этого уровня
     private final Map<String, AstNode> values = new HashMap<>();
 
@@ -26,7 +27,7 @@ public class LispContext {
         if (values.containsKey(name)) {
             return values.get(name);
         }
-        
+
         // 2. Если не нашли — спрашиваем у родителя (рекурсия)
         if (parent != null) {
             return parent.get(name);
@@ -40,7 +41,7 @@ public class LispContext {
     public void define(String name, AstNode value) {
         values.put(name, value);
     }
-    
+
     @Override
     public String toString() {
         return "Context{keys=" + values.keySet() + ", parent=" + (parent != null ? "exist" : "null") + "}";

@@ -1,32 +1,17 @@
 package org.banana.translator;
 
-import lombok.Getter;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-/**
- * Created by Banana on 05.12.2025
- */
 public enum FunctionName {
-    QUOTE("QUOTE"),
-    ADD("ADD"),
-    SUB("SUB"),
-    MUL("MUL"),
-    DIV("DIV"),
-    CAR("CAR"),
-    CDR("CDR"),
-    CONS("CONS"),
-    ATOM("ATOM"),
-    REM("REM"),
-    LEQ("LEQ"),
-    EQUAL("EQUAL"),
-    COND("COND"),
-    LAMBDA("LAMBDA"),
-    LET("LET"),
-    LETREC("LETREC");
-    @Getter
-    private final String description;
+    QUOTE, ADD, SUB, MUL, DIV, CAR, CDR, CONS, ATOM, REM, LEQ, EQUAL, COND, LAMBDA, LET, LETREC;
 
-    FunctionName(String description){
-        this.description = description;
+    private static final Map<String, FunctionName> BY_NAME = Arrays.stream(values())
+            .collect(Collectors.toMap(Enum::name, f -> f));
+
+    public static Optional<FunctionName> fromString(String name) {
+        return Optional.ofNullable(BY_NAME.get(name));
     }
-
 }

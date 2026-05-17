@@ -14,55 +14,39 @@ import java.util.ArrayList;
 @Slf4j
 @UtilityClass
 public class LispKitParserApp {
+
     public static String parseAndCompileAndRun(String input) {
-        // 1. Парсинг
-        ParseTree tree = buildConcreteSyntaxTree(input);
-        LispAstVisitor visitor = new LispAstVisitor();
-        AstNode astRoot = visitor.visit(tree);
-
-        // 2. Компиляция
-        LispCompiler compiler = new LispCompiler();
-        // Начальный контекст имен пустой
-        AstList secdCode = compiler.compile(astRoot, new ArrayList<>());
-
-        // Добавляем команду остановки
-//        secdCode.addChild(new AstAtomSymbol("STOP"));
-
-        String bytecode = secdCode.reconstruct(); // Для отладки
-        log.info(bytecode);
-        // 3. Исполнение
-        SecdMachine vm = new SecdMachine();
-        AstNode result = vm.run(secdCode);
-
+        AstNode astRoot = parseToAst(input);
+        AstList secdCode = new LispCompiler().compile(astRoot, new ArrayList<>());
+        String bytecode = secdCode.reconstruct();
+        log.info("Bytecode: {}", bytecode);
+        AstNode result = new SecdMachine().run(secdCode);
         return "SECD Result: " + result.reconstruct() + "\nCode: " + bytecode;
     }
 
     public static String parseAndEvaluate(String input) {
-        // 1. Построение AST (как и раньше)
-        ParseTree tree = buildConcreteSyntaxTree(input);
-        LispAstVisitor visitor = new LispAstVisitor();
-        AstNode astRoot = visitor.visit(tree);
-
-        // 2. Печать для отладки
+        AstNode astRoot = parseToAst(input);
         AstPrinter.print(astRoot);
-
-        // 3. Вычисление AST
-        LispEvaluator evaluator = new LispEvaluator();
-        LispContext globalContext = new LispContext(); // Создаем глобальный контекст
-
-        // ВАЖНО: Вычисление начинается с глобального контекста
-        AstNode result = evaluator.evaluate(astRoot, globalContext);
-
-        // 4. Возвращаем результат в виде строки
+        AstNode result = new LispEvaluator().evaluate(astRoot, new LispContext());
         return "Result: " + result.reconstruct();
     }
 
-    public static String parseAndGetAstString(String input) {
+    public static AstNode parseToAst(String input) {
         ParseTree tree = buildConcreteSyntaxTree(input);
+        return new LispAstVisitor().visit(tree);
+    }
 
-        LispAstVisitor visitor = new LispAstVisitor();
-        AstNode astRoot = visitor.visit(tree);
+    public static AstNode compileAndRun(String input) {
+        AstList secdCode = new LispCompiler().compile(parseToAst(input), new ArrayList<>());
+        return new SecdMachine().run(secdCode);
+    }
 
+    public static AstNode evaluateToNode(String input) {
+        return new LispEvaluator().evaluate(parseToAst(input), new LispContext());
+    }
+
+    public static String parseAndGetAstString(String input) {
+        AstNode astRoot = parseToAst(input);
         AstPrinter.print(astRoot);
         return astRoot.reconstruct();
     }

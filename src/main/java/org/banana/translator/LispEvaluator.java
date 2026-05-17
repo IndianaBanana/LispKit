@@ -2,6 +2,7 @@ package org.banana.translator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.IntBinaryOperator;
 
 /**
@@ -12,10 +13,6 @@ public class LispEvaluator {
     public AstNode evaluate(AstNode node, LispContext context) {
         if (node instanceof AstAtomNumber) return node;
         else if (node instanceof AstAtomSymbol astAtomSymbol) {
-//            String name = astAtomSymbol.getName().toUpperCase();
-//            if (name.equals("TRUE") || name.equals("FALSE") || name.equals("NIL")) {
-//                return node;
-//            }
             return context.get(astAtomSymbol.getName());
         } else if (node instanceof AstList list) {
             if (list.getChildren().isEmpty()) {
@@ -24,10 +21,10 @@ public class LispEvaluator {
             AstNode head = list.getChildren().get(0);
             if (head instanceof AstAtomSymbol) {
                 String name = ((AstAtomSymbol) head).getName().toUpperCase();
-                try {
-                    FunctionName functionName = FunctionName.valueOf(name);
+                Optional<FunctionName> maybeBuiltin = FunctionName.fromString(name);
+                if (maybeBuiltin.isPresent()) {
                     List<AstNode> args = list.getChildren().subList(1, list.getChildren().size());
-                    switch (functionName) {
+                    switch (maybeBuiltin.get()) {
                         case ATOM:
                             return evaluateAtom(args, context);
                         case QUOTE:
@@ -61,7 +58,7 @@ public class LispEvaluator {
                         case LETREC:
                             return evaluateLetrec(list.getChildren(), context);
                     }
-                } catch (IllegalArgumentException ex) {}
+                }
             }
             return evaluateApplication(list, context);
         }
@@ -181,7 +178,6 @@ public class LispEvaluator {
      * текущем окружении.
      */
     private AstNode evaluateCond(List<AstNode> args, LispContext context) {
-        System.out.println(args);
         if (args.size() != 3) throw new RuntimeException("COND expects 3 arguments");
         AstNode evalCondition = evaluate(args.get(0), context);
         if (!(evalCondition instanceof AstAtomSymbol symbolEvalCondition

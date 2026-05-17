@@ -2,59 +2,47 @@ package org.banana.translator;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import lombok.extern.slf4j.Slf4j;
-import org.fife.ui.autocomplete.AutoCompletion;
-import org.fife.ui.autocomplete.AutoCompletionListener; // ДОБАВЛЕНО: Правильный импорт для слушателя
-import org.fife.ui.autocomplete.AutoCompletionEvent; // ДОБАВЛЕНО: Импорт для события
-import org.fife.ui.autocomplete.BasicCompletion;
-import org.fife.ui.autocomplete.CompletionProvider;
-import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
-import org.fife.ui.autocomplete.ShorthandCompletion;
+
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import java.awt.*;
-import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.util.List;
 
 @Slf4j
 public class LispKitGui {
 
-    private static RSyntaxTextArea inputArea;
-    private static JTextArea outputArea;
-    private static JScrollPane outputScroll;
-    private static JRadioButton evalRadio;
-    private static JRadioButton compileRadio;
-    private static JButton toggleOutputBtn;
-    private static AutoCompletion ac; // Сделали static для доступа в listener
-    private static CompletionProvider provider; // Для проверки completions в listener
+    private RSyntaxTextArea inputArea;
+    private JTextArea outputArea;
+    private JScrollPane outputScroll;
+    private JRadioButton evalRadio;
+    private JRadioButton compileRadio;
+    private JButton toggleOutputBtn;
 
     public static void main(String[] args) {
-        // Установка FlatLaf
         try {
             UIManager.setLookAndFeel(new FlatLightLaf());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to set look and feel", e);
         }
-
-        SwingUtilities.invokeLater(LispKitGui::createGUI);
+        SwingUtilities.invokeLater(() -> new LispKitGui().createGUI());
     }
 
-    private static void createGUI() {
+    private void createGUI() {
         JFrame frame = new JFrame("LispKit");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(1000, 800);
+        frame.setSize(1100, 800);
 
-        // Layout: Вертикальный
         JPanel mainPanel = new JPanel(new net.miginfocom.swing.MigLayout(
-                "fill, insets 10", "[grow]", "[][grow][][][grow]"
+                "fill, insets 10", "[grow][220!]", "[][grow 40][][][grow 60]"
         ));
 
         // Title
         JLabel title = new JLabel("LispKit", JLabel.CENTER);
         title.setFont(new Font("Serif", Font.BOLD, 16));
-        mainPanel.add(title, "span, wrap, center");
+        mainPanel.add(title, "span 2, wrap, center");
 
         // Input editor
         inputArea = new RSyntaxTextArea(20, 60);
@@ -62,67 +50,21 @@ public class LispKitGui {
         inputArea.setLineWrap(true);
         inputArea.setWrapStyleWord(true);
         inputArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_LISP);
-
-        // Настройка автодополнения
-        provider = createCompletionProvider();
-        ac = new AutoCompletion(provider);
-        ac.setAutoCompleteEnabled(true);
-        ac.setAutoActivationEnabled(true);
-        ac.setAutoActivationDelay(0); // Мгновенно
-        ac.setAutoCompleteSingleChoices(false);
-        ac.setShowDescWindow(true);
-        ac.setChoicesWindowSize(200, 200);
-        ac.setTriggerKey(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, KeyEvent.CTRL_DOWN_MASK));
-
-        // Отладка: Listener для логирования событий автодополнения (исправлено на правильные методы)
-        ac.addAutoCompletionListener(new AutoCompletionListener() {
-            @Override
-            public void autoCompleteUpdate(AutoCompletionEvent autoCompletionEvent) {
-
-            }
-        });
-
-        ac.install(inputArea);
-
-        // ДОБАВЛЕНО: "Тупой" KeyListener для 100% автоматического показа popup
-        inputArea.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                char keyChar = e.getKeyChar();
-                if (Character.isLetter(keyChar)) { // Только на буквах
-                    try {
-                        // Получаем текущий текст и позицию курсора
-                        int caretPos = inputArea.getCaretPosition();
-                        String text = inputArea.getText(0, caretPos);
-                        // Находим последнее слово (до пробела/скобки)
-                        int wordStart = Math.max(text.lastIndexOf(' '), text.lastIndexOf('(')) + 1;
-                        String currentWord = text.substring(wordStart).trim();
-
-                        // Если слово не пустое и есть completions — показываем popup вручную
-                        if (currentWord.length() >= 1) {
-                            List<?> completions = provider.getCompletions(inputArea);
-                            if (!completions.isEmpty()) {
-                                ac.doCompletion(); // Форсируем показ
-//                                log.info("KeyListener: Forced popup for word '" + currentWord + "'");
-                            }
-                        }
-                    } catch (Exception ex) {
-                        log.error("Error in KeyListener: " + ex.getMessage());
-                    }
-                }
-            }
-        });
+        inputArea.setTabSize(2);
 
         RTextScrollPane inputScroll = new RTextScrollPane(inputArea);
         inputScroll.setLineNumbersEnabled(true);
-        mainPanel.add(inputScroll, "cell 0 1, grow, wrap");
+        mainPanel.add(inputScroll, "cell 0 1, grow");
 
-        // Радио-панель
+        // Reference panel — занимает правую колонку на все строки (1-4)
+        mainPanel.add(buildReferencePanel(), "cell 1 1 1 4, growy, top");
+
+        // Mode selector
         JPanel radioPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         JLabel modeLabel = new JLabel("Mode:");
         modeLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
-        evalRadio = new JRadioButton("Parse and Evaluate");
-        compileRadio = new JRadioButton("Parse, Compile and Run");
+        evalRadio = new JRadioButton("Interpret");
+        compileRadio = new JRadioButton("Compile + Run (SECD)");
         compileRadio.setSelected(true);
         ButtonGroup group = new ButtonGroup();
         group.add(evalRadio);
@@ -132,16 +74,21 @@ public class LispKitGui {
         radioPanel.add(compileRadio);
         mainPanel.add(radioPanel, "cell 0 2, center, wrap");
 
-        // Кнопки
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        JButton checkBtn = new JButton("Evaluate");
-        checkBtn.setFont(new Font("SansSerif", Font.BOLD, 18));
-        checkBtn.setBackground(new Color(30, 144, 255));
-        checkBtn.setForeground(Color.WHITE);
-        buttonPanel.add(checkBtn);
+        // Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
+
+        JButton runBtn = new JButton("Run  (Ctrl+Enter)");
+        runBtn.setFont(new Font("SansSerif", Font.BOLD, 15));
+        runBtn.setBackground(new Color(30, 144, 255));
+        runBtn.setForeground(Color.WHITE);
+        buttonPanel.add(runBtn);
+
+        JButton clearBtn = new JButton("Clear");
+        clearBtn.setFont(new Font("SansSerif", Font.BOLD, 15));
+        buttonPanel.add(clearBtn);
 
         toggleOutputBtn = new JButton("Hide Output");
-        toggleOutputBtn.setFont(new Font("SansSerif", Font.BOLD, 18));
+        toggleOutputBtn.setFont(new Font("SansSerif", Font.BOLD, 15));
         toggleOutputBtn.setBackground(new Color(100, 100, 100));
         toggleOutputBtn.setForeground(Color.WHITE);
         buttonPanel.add(toggleOutputBtn);
@@ -150,46 +97,38 @@ public class LispKitGui {
 
         // Output
         outputArea = new JTextArea();
-        outputArea.setFont(new Font("Monospaced", Font.BOLD, 16));
+        outputArea.setFont(new Font("Monospaced", Font.PLAIN, 18));
         outputArea.setEditable(false);
         outputArea.setBackground(new Color(245, 245, 245));
         outputArea.setLineWrap(true);
         outputArea.setWrapStyleWord(true);
 
         outputScroll = new JScrollPane(outputArea);
-        mainPanel.add(outputScroll, "cell 0 4, grow, wrap");
+        mainPanel.add(outputScroll, "cell 0 4, grow, wrap, height 180::");
 
-        // Action Evaluate
-        checkBtn.addActionListener(e -> {
-            String code = inputArea.getText().trim();
-            if (code.isEmpty()) {
-                outputArea.setText("ERROR: Empty input");
-                outputArea.setForeground(Color.RED);
-                return;
-            }
-
-            try {
-                String evaluationResult;
-                if (evalRadio.isSelected()) {
-                    evaluationResult = LispKitParserApp.parseAndEvaluate(code);
-                } else {
-                    evaluationResult = LispKitParserApp.parseAndCompileAndRun(code);
-                }
-
-                outputArea.setText("EVALUATION RESULT:\n" + evaluationResult);
-                outputArea.setForeground(new Color(0, 0, 139));
-            } catch (RuntimeException ex) {
-                outputArea.setText("RUNTIME ERROR:\n" + ex.getMessage());
-                outputArea.setForeground(Color.RED);
-                ex.printStackTrace();
+        // Ctrl+Enter shortcut
+        inputArea.getInputMap().put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK),
+                "run"
+        );
+        inputArea.getActionMap().put("run", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                runBtn.doClick();
             }
         });
 
-        // Action Toggle
+        // Actions
+        runBtn.addActionListener(e -> evaluate());
+        clearBtn.addActionListener(e -> {
+            inputArea.setText("");
+            outputArea.setText("");
+            inputArea.requestFocus();
+        });
         toggleOutputBtn.addActionListener(e -> {
-            boolean isVisible = outputScroll.isVisible();
-            outputScroll.setVisible(!isVisible);
-            toggleOutputBtn.setText(isVisible ? "Show Output" : "Hide Output");
+            boolean visible = outputScroll.isVisible();
+            outputScroll.setVisible(!visible);
+            toggleOutputBtn.setText(visible ? "Show Output" : "Hide Output");
             mainPanel.revalidate();
             mainPanel.repaint();
         });
@@ -197,66 +136,72 @@ public class LispKitGui {
         frame.setContentPane(mainPanel);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+        inputArea.requestFocus();
     }
 
-    private static CompletionProvider createCompletionProvider() {
-        DefaultCompletionProvider provider = new DefaultCompletionProvider();
+    private void evaluate() {
+        String code = inputArea.getText().trim();
+        if (code.isEmpty()) {
+            outputArea.setText("ERROR: Empty input");
+            outputArea.setForeground(Color.RED);
+            return;
+        }
+        try {
+            String result = evalRadio.isSelected()
+                    ? LispKitParserApp.parseAndEvaluate(code)
+                    : LispKitParserApp.parseAndCompileAndRun(code);
+            outputArea.setText(result);
+            outputArea.setForeground(new Color(100, 100, 100));
+        } catch (RuntimeException ex) {
+            outputArea.setText("ERROR: " + ex.getMessage());
+            outputArea.setForeground(Color.RED);
+            log.error("Evaluation error", ex);
+        }
+    }
 
-        // --- Сложные конструкции (Шаблоны) ---
+    private JPanel buildReferencePanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createEtchedBorder(), "Quick Reference",
+                TitledBorder.LEFT, TitledBorder.TOP,
+                new Font("SansSerif", Font.BOLD, 12)
+        ));
 
-        // LET: Каркас для локальных переменных
-        provider.addCompletion(new ShorthandCompletion(provider, "let",
-                "(let (add X Y)\n\t(X (QUOTE 3))\n\t(Y (QUOTE 7))\n)",
-                "Локальные привязки (каркас)"));
+        String ref =
+                "── Арифметика ──────────\n" +
+                "(add x y)\n" +
+                "(sub x y)\n" +
+                "(mul x y)\n" +
+                "(div x y)\n" +
+                "(rem x y)\n" +
+                "\n── Сравнения ───────────\n" +
+                "(leq x y)   → TRUE/FALSE\n" +
+                "(equal x y) → TRUE/FALSE\n" +
+                "\n── Списки ──────────────\n" +
+                "(cons head tail)\n" +
+                "(car list)\n" +
+                "(cdr list)\n" +
+                "(atom x)    → TRUE/FALSE\n" +
+                "(quote x)\n" +
+                "\n── Управление ──────────\n" +
+                "(cond p then else)\n" +
+                "\n── Функции ─────────────\n" +
+                "(lambda (a b)\n  body)\n" +
+                "\n── Привязки ────────────\n" +
+                "(let body\n  (x (quote 3))\n  (y (quote 7)))\n" +
+                "\n── Рекурсия ────────────\n" +
+                "(letrec body\n  (f (lambda (n)\n    ...)))";
 
-        // LETREC: Каркас для рекурсивных функций
-        provider.addCompletion(new ShorthandCompletion(provider, "letrec",
-                "(letrec (\n\t(func (lambda (args) body))\n)\n\t(body)\n)",
-                "Рекурсивные привязки (каркас)"));
+        JTextArea refArea = new JTextArea(ref);
+        refArea.setFont(new Font("Monospaced", Font.PLAIN, 11));
+        refArea.setEditable(false);
+        refArea.setOpaque(false);
+        refArea.setFocusable(false);
+        refArea.setWrapStyleWord(false);
+        refArea.setLineWrap(false);
+        panel.add(refArea);
 
-        // LAMBDA: Каркас функции
-        provider.addCompletion(new ShorthandCompletion(provider, "lambda",
-                "(lambda (arg1 arg2)\n\t(body)\n)",
-                "Анонимная функция"));
-
-        // COND: Каркас условий
-        provider.addCompletion(new ShorthandCompletion(provider, "cond",
-                "(cond\n\t(condition1 expr1)\n\t(condition2 expr2)\n\t(QUOTE TRUE else_expr)\n)",
-                "Условный оператор"));
-
-        // --- Базовые функции (с подсказкой скобок) ---
-
-        // QUOTE
-        provider.addCompletion(new ShorthandCompletion(provider, "quote",
-                "(quote x)",
-                "Цитирует выражение"));
-
-        // Списки
-        provider.addCompletion(new ShorthandCompletion(provider, "cons",
-                "(cons head tail)", "Создаёт пару"));
-        provider.addCompletion(new ShorthandCompletion(provider, "car",
-                "(car list)", "Первый элемент списка"));
-        provider.addCompletion(new ShorthandCompletion(provider, "cdr",
-                "(cdr list)", "Хвост списка"));
-        provider.addCompletion(new ShorthandCompletion(provider, "atom",
-                "(atom x)", "Проверка на атом"));
-
-        // Арифметика и сравнение
-        provider.addCompletion(new ShorthandCompletion(provider, "add",
-                "(add x y)", "Сложение"));
-        provider.addCompletion(new ShorthandCompletion(provider, "sub",
-                "(sub x y)", "Вычитание"));
-        provider.addCompletion(new ShorthandCompletion(provider, "mul",
-                "(mul x y)", "Умножение"));
-        provider.addCompletion(new ShorthandCompletion(provider, "div",
-                "(div x y)", "Деление"));
-        provider.addCompletion(new ShorthandCompletion(provider, "rem",
-                "(rem x y)", "Остаток"));
-        provider.addCompletion(new ShorthandCompletion(provider, "leq",
-                "(leq x y)", "Меньше или равно"));
-        provider.addCompletion(new ShorthandCompletion(provider, "equal",
-                "(equal x y)", "Равенство"));
-
-        return provider;
+        return panel;
     }
 }

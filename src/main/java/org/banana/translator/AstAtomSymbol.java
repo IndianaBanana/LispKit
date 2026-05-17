@@ -2,9 +2,9 @@ package org.banana.translator;
 
 import lombok.EqualsAndHashCode;
 
-import java.util.Objects;
 @EqualsAndHashCode
 public class AstAtomSymbol implements AstNode {
+
     private final String name;
 
     public AstAtomSymbol(String name) {

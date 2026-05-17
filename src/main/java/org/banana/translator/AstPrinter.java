@@ -17,15 +17,13 @@ public class AstPrinter {
 
         if (node instanceof AstList list) {
             log.info("{}📂 List (size={})", indent, list.getChildren().size());
-            
+
             for (AstNode child : list.getChildren()) {
                 printRecursive(child, depth + 1);
             }
-
         } else if (node instanceof AstAtomNumber) {
             AstAtomNumber num = (AstAtomNumber) node;
             log.info("{}🔢 Number: {}", indent, num.getValue());
-
         } else if (node instanceof AstAtomSymbol) {
             AstAtomSymbol sym = (AstAtomSymbol) node;
             // Выводим символ
